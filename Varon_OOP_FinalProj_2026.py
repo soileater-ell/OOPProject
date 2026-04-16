@@ -105,9 +105,10 @@ class Seq:
     def print_record(self):
         print(self.species + " " + self.gene + ": " + self.sequence)
 
-    def make_kmers(self, k=3):
-        for n in range(len(self.sequence)-2):
-            codon = self.sequence[n:n+3]
+    def make_kmers(self,sub):
+        self.kmers=[]
+        for n in range(len(self.sequence)-(sub-1)):
+            codon = self.sequence[n:n+sub]
             self.kmers.append(codon)
     def fasta(self):
         return ">"+self.species+" "+self.gene+"\n"+self.sequence
