@@ -112,6 +112,27 @@ class Seq:
     def fasta(self):
         return ">"+self.species+" "+self.gene+"\n"+self.sequence
 
+    def fasta_parser(self,file):
+        """
+        This function parses a fasta file and returns the sequence, species, and associated gene
+        
+        >>> p = Protein("  WCVALKKKCCYhhhhh-yyyrsQ\t ", "my_prot", "D.melanogaster","56008009")
+        >>> print(p)
+        WCVALKKKCCYHHHHHXYYYRSQ
+        >>> print(p.fasta_parser('seq.txt'))
+        ['H.sapiens', 'my_gene']
+        {'GATATAGGACCTTTAGGACCAC': ['H.sapiens', 'my_gene']}
+        """
+        with open(file,'r') as fastar:
+            for i in fastar.readlines():
+                if i.startswith('>'):
+                    species_gene_split = i[1:].split(';')
+                    cleaned_labels = [i.strip() for i in species_gene_split]
+                    print(cleaned_labels)
+                else:
+                    self.fasta_hash[i] = cleaned_labels
+                    self.sequence_list.append(i)
+        return self.fasta_hash
 
 class DNA(Seq):
 
@@ -251,6 +272,27 @@ class Protein(Seq):
         weight=[aa_mol_weights.get(aa) for aa in self.sequence]
         return sum(weight)
 
+    def __gt__(self, other):
+        """
+        This function overloads the greater than operator to compare the molecular weights of two protein sequences,
+        meaning the mol_weight function will have to be called first before doing the comparison
+        
+        >>> p = Protein("  WCVALKKKCCYhhhhh-yyyrsQ\t ", "my_prot", "D.melanogaster","56008009")
+        >>> print(p)
+        WCVALKKKCCYHHHHHXYYYRSQ
+        >>> testp = Protein('VIKING','test','unknown','999')
+        >>> print(testp)
+        VIKING
+        >>> print(testp > p)
+        my_prot is larger than test
+        """
+        try:
+            if self._total_mol_weight_score > other._total_mol_weight_score:
+                return f"{self.gene} is larger than {other.gene}"
+            else:
+                return f"{other.gene} is larger than {self.gene}"
+        except AttributeError as e:
+            return "An attribute error has occured please make sure that you called the molecular weight function first before comparing sequence weights"
 
 
 if __name__ == "__main__":
