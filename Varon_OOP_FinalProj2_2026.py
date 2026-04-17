@@ -111,8 +111,33 @@ class Seq:
             codon = self.sequence[n:n+sub]
             self.kmers.append(codon)
     def fasta(self):
-        return ">"+self.species+" "+self.gene+"\n"+self.sequence
-
+        with open("seq.txt",'w') as fastaw:
+            fastaw.write(f"> {self.species};{self.gene} \n")
+            fastaw.write(self.sequence)
+        return f"> {self.species} {self.gene} {self.sequence}"
+    #Function to parse fasta file by detecting sequence id using '>', slicing out the symbol and splitting on ';' to store species and gene in its own list
+    # Everything is stored as a dictionary with the sequence as a key and the value as a list with species and gene
+    def fasta_parser(self,file):
+        """
+        This function parses a fasta file and returns the sequence, species, and associated gene
+        
+        >>> p = Protein("  WCVALKKKCCYhhhhh-yyyrsQ\t ", "my_prot", "D.melanogaster","56008009")
+        >>> print(p)
+        WCVALKKKCCYHHHHHXYYYRSQ
+        >>> print(p.fasta_parser('seq.txt'))
+        ['H.sapiens', 'my_gene']
+        {'GATATAGGACCTTTAGGACCAC': ['H.sapiens', 'my_gene']}
+        """
+        with open(file,'r') as fastar:
+            for i in fastar.readlines():
+                if i.startswith('>'):
+                    species_gene_split = i[1:].split(';')
+                    cleaned_labels = [i.strip() for i in species_gene_split]
+                    print(cleaned_labels)
+                else:
+                    self.fasta_hash[i] = cleaned_labels
+                    self.sequence_list.append(i)
+        return self.fasta_hash
 
 class DNA(Seq):
 
@@ -130,8 +155,29 @@ class DNA(Seq):
         print(self.geneid+" "+self.species + " " + self.gene + ": " + self.sequence)
         
     def reverse_complement(self):
-        revseq=self.sequence.replace("A","t").replace("T","a").replace("C","g").replace("G","c")
-        return revseq.upper()[::-1]
+        """
+        returns the reverse complement of a given DNA sequence
+
+        >>> d=DNA("   -tcaaaGCGGATCTTCCCaaatga\\n","my_dna","D.terebrans","AX5667")
+        >>> print(d)
+        NTCAAAGCGGATCTTCCCAAATGA
+        >>> rc = d.reverse_complement()
+        >>> print(rc)
+        TCATTTGGGAAGATCCGCTTTGAN
+        """
+        self._reverse_strand = ""
+        for i in self.sequence[::-1]:
+            if i == "T":
+                self._reverse_strand += "A"
+            elif i == "A":
+                self._reverse_strand += "T"
+            elif i == "G":
+                self._reverse_strand += "C"
+            elif i == "C":
+                self._reverse_strand += "G"
+            else:
+                self._reverse_strand += "N"
+        return self._reverse_strand
     def six_frames(self):
         '''
         returns all 6 reading frames
@@ -249,8 +295,47 @@ class Protein(Seq):
         hydro=[kyte_doolittle.get(aa) for aa in self.sequence]
         return round(sum(hydro),2)
     def mol_weight(self):
-        weight=[aa_mol_weights.get(aa) for aa in self.sequence]
-        return sum(weight)
+        """
+        The mol_weight function returns the molecular weight of a given protein sequence
+        >>> p = Protein("  WCVALKKKCCYhhhhh-yyyrsQ\t ", "my_prot", "D.melanogaster","56008009")
+        >>> print(p)
+        WCVALKKKCCYHHHHHXYYYRSQ
+        >>> x_p = p.mol_weight()
+        >>> print(x_p)
+        3269.6600000000008
+        
+        """
+        self._total_mol_weight_score = 0
+        for i in self.sequence:
+            _mol_weight_residue_score = aa_mol_weights[i]
+            self._total_mol_weight_score +=  _mol_weight_residue_score
+        return self._total_mol_weight_score
+    # Operator overloading on greater than symbol, which is used to compare molecular weights of 2 protein objects
+    # Done in a try/except block to ensure user calls the mol_weight() function, so the program has access to that data for comparison
+    def __gt__(self, other):
+        """
+        This function overloads the greater than operator to compare the molecular weights of two protein sequences,
+        meaning the mol_weight function will have to be called first before doing the comparison
+        
+        >>> p = Protein("  WCVALKKKCCYhhhhh-yyyrsQ\t ", "my_prot", "D.melanogaster","56008009")
+        >>> print(p)
+        WCVALKKKCCYHHHHHXYYYRSQ
+        >>> testp = Protein('VIKING','test','unknown','999')
+        >>> print(testp)
+        VIKING
+        >>> print(testp > p)
+        my_prot is larger than test
+        """
+        try:
+            if self._total_mol_weight_score > other._total_mol_weight_score:
+                return f"{self.gene} is larger than {other.gene}"
+            else:
+                return f"{other.gene} is larger than {self.gene}"
+        except AttributeError as e:
+            return "An attribute error has occured please make sure that you called the molecular weight function first before comparing sequence weights"
+
+    
+
 
 
 
